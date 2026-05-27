@@ -24,42 +24,52 @@ class AuthController extends Controller
     // REGISTER - Kirim OTP
     public function sendRegisterOtp(Request $request)
     {
-        $v = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'username' => 'required|string|max:50|unique:users',
             'email' => 'nullable|email|unique:users',
-            'password' => 'required|string|min:8|confirmed',
             'phone' => 'required|string|max:20|unique:users',
+            'password' => 'required|string|min:8|confirmed',
             'address' => 'required|string',
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username sudah terdaftar.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email sudah terdaftar.',
+            'phone.required' => 'Nomor telepon wajib diisi.',
+            'phone.unique' => 'Nomor telepon sudah terdaftar.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min' => 'Password minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+            'address.required' => 'Alamat wajib diisi.',
         ]);
-        if ($v->fails()) return response()->json(['success' => false, 'errors' => $v->errors()], 422);
 
-        $token = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
 
-        OtpVerification::where('phone', $request->phone)->where('type', 'register')->delete();
-        OtpVerification::create([
-            'phone' => $request->phone,
-            'token' => $token,
-            'type' => 'register',
-            'expires_at' => now()->addMinutes(2)
-        ]);
-
-        cache()->put('register_' . $request->phone, [
+        // Langsung buat user tanpa OTP
+        $user = User::create([
             'name' => $request->name,
+            'username' => $request->username,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
             'phone' => $request->phone,
-            'address' => $request->address
-        ], 600);
+            'password' => Hash::make($request->password),
+            'address' => $request->address,
+            'role' => 'user',
+            'phone_verified_at' => now(),
+            'is_first_login' => true,
+        ]);
 
-        $this->sms->sendOtp($request->phone, $token);
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'success' => true,
-            'message' => 'Kode OTP dikirim ke ' . $this->maskPhone($request->phone) . '. Berlaku 2 menit.',
-            'debug_token' => config('app.debug') ? $token : null,
-            'expires_in' => 120
-        ]);
+            'message' => 'Registrasi berhasil! Silakan login.',
+            'user' => $user,
+            'token' => $token,
+        ], 201);
     }
 
     // REGISTER - Verifikasi OTP

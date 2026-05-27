@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\PromoController;
 use App\Http\Controllers\Admin\BannerController as AdminBannerController;
 use App\Http\Controllers\Admin\PromoController as AdminPromoController;
+use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\UserController;
 
 
@@ -27,6 +28,7 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/banners', [BannerController::class, 'index']);
 Route::get('/promos', [PromoController::class, 'index']);
+Route::get('/categories', [ApiCategoryController::class, 'index']);
 // Route::get('/payment-settings', [PaymentSettingController::class, 'index']);
 // Route::apiResource('/payment-settings', PaymentSettingController::class)->middleware('role:master');
 
@@ -86,4 +88,10 @@ Route::middleware(['auth:sanctum', 'role:admin,master'])->prefix('admin')->group
     Route::put('/promos/{id}', [AdminPromoController::class, 'update'])->middleware('permission:banners,edit');
     Route::delete('/promos/{id}', [AdminPromoController::class, 'destroy'])->middleware('permission:banners,delete');
     Route::post('/promos/{id}/image', [AdminPromoController::class, 'uploadImage'])->middleware('permission:banners,edit');
+
+    // Categories
+    Route::get('/categories', [CategoryController::class, 'index'])->middleware('permission:categories,view');
+    Route::post('/categories', [CategoryController::class, 'store'])->middleware('permission:categories,create');
+    Route::put('/categories/{id}', [CategoryController::class, 'update'])->middleware('permission:categories,edit');
+    Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])->middleware('permission:categories,delete');
 });
